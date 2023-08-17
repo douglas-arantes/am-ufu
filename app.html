@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Regra de Hebb</title>
+    <style>
+      body {
+        background-color: #1a1a1a;
+        color: #f0f0f0;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .container {
+        background-color: #292929;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+        width: 400px; /* Aumentei a largura do contêiner */
+        max-width: 90%;
+        text-align: center;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+        background-color: #292929;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        text-align: center;
+      }
+
+      th {
+        background-color: #383838;
+        font-weight: bold;
+      }
+
+      td input {
+        background-color: #1a1a1a;
+        color: #f0f0f0;
+        border: 1px solid #383838;
+        padding: 5px 10px;
+        width: 100%;
+        box-sizing: border-box;
+        border-radius: 5px;
+      }
+
+      .submit-button {
+        font-weight: bold;
+        letter-spacing: 2px;
+        background-color: #007bff;
+        color: #f0f0f0;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        display: block;
+        margin: 0 auto;
+        transition: background-color 0.3s ease;
+      }
+
+      .submit-button:hover {
+        background-color: #0056b3;
+      }
+
+      .results-section {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #383838;
+        border-radius: 10px;
+      }
+
+      .results-section h2 {
+        margin-bottom: 15px;
+      }
+
+      .results-section h3 {
+        margin-bottom: 10px;
+      }
+
+      .results-section pre {
+        background-color: #1a1a1a;
+        color: #f0f0f0;
+        padding: 10px;
+        border-radius: 5px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Treinamento do Neurônio</h1>
+
+      <h2>Dados de Treinamento</h2>
+      <table>
+        <tr>
+          <th>Entrada 1</th>
+          <th>Entrada 2</th>
+        </tr>
+        <tr>
+          <td><input type="number" id="input-1-0" /></td>
+          <td><input type="number" id="input-2-0" /></td>
+        </tr>
+        <tr>
+          <td><input type="number" id="input-1-1" /></td>
+          <td><input type="number" id="input-2-1" /></td>
+        </tr>
+        <tr>
+          <td><input type="number" id="input-1-2" /></td>
+          <td><input type="number" id="input-2-2" /></td>
+        </tr>
+        <tr>
+          <td><input type="number" id="input-1-3" /></td>
+          <td><input type="number" id="input-2-3" /></td>
+        </tr>
+      </table>
+
+      <h2>Valores Desejados de Saída</h2>
+      <table>
+        <tr>
+          <th>Padrão</th>
+          <th>Valor Desejado</th>
+        </tr>
+        <tr>
+          <td>0</td>
+          <td><input type="number" id="target-0" /></td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><input type="number" id="target-1" /></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><input type="number" id="target-2" /></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><input type="number" id="target-3" /></td>
+        </tr>
+      </table>
+
+      <button class="submit-button" id="train-button">Treinar Rede</button>
+
+      <div class="results-section">
+        <h2>Resultados</h2>
+        <div id="results"></div>
+        <div id="weights-output"></div>
+      </div>
+    </div>
+
+    <script>
+      // Função degrau
+      function stepFunction(x) {
+        return x >= 0 ? 1 : -1;
+      }
+
+      const trainButton = document.getElementById("train-button");
+      const resultsDiv = document.getElementById("results");
+
+      trainButton.addEventListener("click", function () {
+        const inputPatterns = [
+          [
+            Number(document.getElementById("input-1-0").value),
+            Number(document.getElementById("input-2-0").value),
+          ],
+          [
+            Number(document.getElementById("input-1-1").value),
+            Number(document.getElementById("input-2-1").value),
+          ],
+          [
+            Number(document.getElementById("input-1-2").value),
+            Number(document.getElementById("input-2-2").value),
+          ],
+          [
+            Number(document.getElementById("input-1-3").value),
+            Number(document.getElementById("input-2-3").value),
+          ],
+        ];
+
+        const targetOutputs = [
+          Number(document.getElementById("target-0").value),
+          Number(document.getElementById("target-1").value),
+          Number(document.getElementById("target-2").value),
+          Number(document.getElementById("target-3").value),
+        ];
+
+        // Inicialização dos pesos e bias
+        let weights = [0, 0];
+        let bias = 0;
+        const learningRate = 0.1;
+        const epochs = 1000;
+
+        for (let epoch = 0; epoch < epochs; epoch++) {
+          for (
+            let patternIndex = 0;
+            patternIndex < inputPatterns.length;
+            patternIndex++
+          ) {
+            let weightedSum =
+              weights[0] * inputPatterns[patternIndex][0] +
+              weights[1] * inputPatterns[patternIndex][1] +
+              bias;
+            let output = stepFunction(weightedSum);
+
+            // Atualiza os pesos se a rede errou
+            if (output !== targetOutputs[patternIndex]) {
+              weights[0] +=
+                learningRate *
+                inputPatterns[patternIndex][0] *
+                targetOutputs[patternIndex];
+              weights[1] +=
+                learningRate *
+                inputPatterns[patternIndex][1] *
+                targetOutputs[patternIndex];
+              bias += learningRate * targetOutputs[patternIndex];
+            }
+          }
+        }
+
+        // Exibição dos pesos finais
+        const weightsOutput = `Pesos Finais: w1 = ${weights[0]}, w2 = ${weights[1]}, bias = ${bias}`;
+        document.getElementById("weights-output").textContent = weightsOutput;
+
+        // Teste da rede e exibição dos resultados
+        let resultsHTML =
+          "<table><tr><th>Padrão</th><th>Saída Desejada</th><th>Saída da Rede</th></tr>";
+        for (
+          let patternIndex = 0;
+          patternIndex < inputPatterns.length;
+          patternIndex++
+        ) {
+          let weightedSum =
+            weights[0] * inputPatterns[patternIndex][0] +
+            weights[1] * inputPatterns[patternIndex][1] +
+            bias;
+          let output = stepFunction(weightedSum);
+
+          resultsHTML += `<tr><td>${patternIndex}</td><td>${targetOutputs[patternIndex]}</td><td>${output}</td></tr>`;
+        }
+        resultsHTML += "</table>";
+        resultsDiv.innerHTML = resultsHTML;
+      });
+    </script>
+  </body>
+</html>
